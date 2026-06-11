@@ -1,0 +1,19 @@
+﻿server:
+  port: ${HMDP_AI_PORT:8090}
+
+spring:
+  application:
+    name: hmdp-ai-service
+  ai:
+    openai:
+      api-key: ${OPENAI_API_KEY:}
+      base-url: ${OPENAI_BASE_URL:https://api.deepseek.com/v1}
+      chat:
+        options:
+          model: ${OPENAI_MODEL:deepseek-chat}
+          temperature: ${OPENAI_TEMPERATURE:0.2}
+
+logging:
+  level:
+    com.hmdp.ai: ${HMDP_AI_LOG_LEVEL:info}
+

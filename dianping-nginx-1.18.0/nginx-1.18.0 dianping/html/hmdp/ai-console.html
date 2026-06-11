@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
+  <title>AI 服务控制台</title>
+  <script src="./js/axios.min.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: #f6f7f8;
+      color: #222;
+      font-family: Arial, "Microsoft YaHei", sans-serif;
+    }
+    .page {
+      max-width: 760px;
+      min-height: 100vh;
+      margin: 0 auto;
+      background: #fff;
+    }
+    .header {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      height: 54px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 0 16px;
+      border-bottom: 1px solid #eee;
+      background: #fff;
+    }
+    .back {
+      border: 0;
+      background: #f1f2f4;
+      border-radius: 18px;
+      padding: 7px 12px;
+      cursor: pointer;
+    }
+    h1 {
+      margin: 0;
+      font-size: 18px;
+    }
+    .content {
+      padding: 16px;
+    }
+    .card {
+      border: 1px solid #eceff1;
+      border-radius: 8px;
+      padding: 14px;
+      margin-bottom: 14px;
+      background: #fff;
+    }
+    .card h2 {
+      margin: 0 0 12px;
+      font-size: 16px;
+    }
+    label {
+      display: block;
+      margin: 10px 0 6px;
+      color: #666;
+      font-size: 13px;
+    }
+    input, textarea, select {
+      width: 100%;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      padding: 10px;
+      font-size: 14px;
+      outline: none;
+    }
+    textarea {
+      min-height: 82px;
+      resize: vertical;
+      line-height: 1.5;
+    }
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 12px;
+    }
+    button.primary {
+      border: 0;
+      border-radius: 6px;
+      background: #ff6633;
+      color: #fff;
+      padding: 10px 14px;
+      cursor: pointer;
+    }
+    button.secondary {
+      border: 0;
+      border-radius: 6px;
+      background: #edf0f2;
+      color: #333;
+      padding: 10px 14px;
+      cursor: pointer;
+    }
+    pre {
+      margin: 12px 0 0;
+      padding: 12px;
+      border-radius: 8px;
+      background: #111827;
+      color: #e5e7eb;
+      white-space: pre-wrap;
+      overflow: auto;
+      max-height: 360px;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+  <div class="header">
+    <button class="back" onclick="history.back()">返回</button>
+    <h1>AI 服务控制台</h1>
+  </div>
+  <div class="content">
+    <div class="card">
+      <h2>Skill Agent</h2>
+      <label>用户需求</label>
+      <textarea id="agentInput">今晚想吃火锅，帮我推荐附近便宜点的店</textarea>
+      <div class="row">
+        <div>
+          <label>经度</label>
+          <input id="agentX" value="120.149993">
+        </div>
+        <div>
+          <label>纬度</label>
+          <input id="agentY" value="30.334229">
+        </div>
+      </div>
+      <div class="actions">
+        <button class="primary" onclick="callAgent()">调用 Agent</button>
+        <button class="secondary" onclick="getRegistry()">Skill 注册表</button>
+      </div>
+      <pre id="agentResult">等待调用。</pre>
+    </div>
+
+    <div class="card">
+      <h2>高并发风险分析</h2>
+      <label>活动描述</label>
+      <textarea id="riskDesc">明晚 618 商品上新，预计会有大量优惠券领取和订单创建请求</textarea>
+      <div class="actions">
+        <button class="primary" onclick="analyzeRisk()">分析风险</button>
+      </div>
+      <pre id="riskResult">等待分析。</pre>
+    </div>
+
+    <div class="card">
+      <h2>DDL 风险检查</h2>
+      <label>DDL</label>
+      <textarea id="ddlText">ALTER TABLE coupon_record ADD COLUMN source_type VARCHAR(32) NOT NULL DEFAULT ''</textarea>
+      <div class="actions">
+        <button class="primary" onclick="checkDdl()">检查 DDL</button>
+      </div>
+      <pre id="ddlResult">等待检查。</pre>
+    </div>
+  </div>
+</div>
+
+<script>
+  axios.defaults.timeout = 8000;
+
+  function show(id, data) {
+    document.getElementById(id).textContent = typeof data === "string" ? data : JSON.stringify(data, null, 2);
+  }
+
+  function err(e) {
+    if (e.response) return {status: e.response.status, data: e.response.data};
+    return {message: e.message};
+  }
+
+  async function post(url, body, target) {
+    try {
+      const res = await axios.post(url, body);
+      show(target, res.data);
+    } catch (e) {
+      show(target, err(e));
+    }
+  }
+
+  async function get(url, target) {
+    try {
+      const res = await axios.get(url);
+      show(target, res.data);
+    } catch (e) {
+      show(target, err(e));
+    }
+  }
+
+  function callAgent() {
+    post("/api/skill/agent/chat", {
+      userId: 1,
+      userInput: document.getElementById("agentInput").value,
+      params: {
+        x: Number(document.getElementById("agentX").value),
+        y: Number(document.getElementById("agentY").value)
+      }
+    }, "agentResult");
+  }
+
+  function getRegistry() {
+    get("/api/skill/registry", "agentResult");
+  }
+
+  function analyzeRisk() {
+    post("/api/risk/analyze", {eventDesc: document.getElementById("riskDesc").value}, "riskResult");
+  }
+
+  function checkDdl() {
+    post("/api/risk/ddl-check", {ddl: document.getElementById("ddlText").value}, "ddlResult");
+  }
+</script>
+</body>
+</html>

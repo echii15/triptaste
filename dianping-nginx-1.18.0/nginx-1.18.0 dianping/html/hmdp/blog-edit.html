@@ -1,0 +1,214 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
+  <title>榛戦┈鐐硅瘎</title>
+  <!-- 寮曞叆鏍峰紡 -->
+  <link rel="stylesheet" href="./css/element.css">
+  <link href="./css/main.css" rel="stylesheet">
+  <link href="./css/blog-edit.css" rel="stylesheet">
+
+  <style type="text/css">
+    .ai-risk-box {
+      margin: 10px;
+      padding: 12px;
+      border-radius: 8px;
+      background: #fff7f2;
+      border: 1px solid #ffd6c2;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+    .ai-risk-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: #ff6633;
+      font-weight: bold;
+      margin-bottom: 8px;
+    }
+    .ai-risk-head button {
+      border: 0;
+      border-radius: 16px;
+      background: #ff6633;
+      color: #fff;
+      padding: 6px 12px;
+    }
+    .ai-risk-result {
+      color: #555;
+      white-space: pre-wrap;
+    }
+  </style>
+</head>
+<body>
+<div id="app">
+  <div class="header">
+    <div class="header-cancel-btn" @click="goBack">鍙栨秷</div>
+    <div class="header-title">&nbsp;&nbsp;鍙戠瑪璁?i class="el-icon-info"></i></div>
+    <div class="header-commit">
+      <div class="header-commit-btn" @click="submitBlog">鍙戝竷</div>
+    </div>
+  </div>
+  <div class="upload-box">
+    <input type="file" @change="fileSelected" name="file" ref="fileInput" style="display: none">
+    <div class="upload-btn" @click="openFileDialog">
+      <i class="el-icon-camera"></i>
+      <div style="font-size: 12px;line-height: 12px">涓婁紶鐓х墖</div>
+    </div>
+    <div class="pic-list">
+      <div class="pic-box" v-for="(f,i) in fileList" :key="i">
+        <img :src="f" alt="">
+        <i class="el-icon-close" @click="deletePic(i)"></i>
+      </div>
+    </div>
+  </div>
+  <div class="blog-title">
+    <input v-model="params.title" type="text" placeholder="濉啓鏍囬鏇村鏄撲笂棣栭〉鍝">
+  </div>
+  <div class="blog-content">
+    <textarea v-model="params.content" placeholder="鏈€杩戞墦鍗′簡浠€涔堝湴鏂癸紝鏈変粈涔堟柊濂囦綋楠屽憿锛?></textarea>
+  </div>
+  <div class="ai-risk-box">
+    <div class="ai-risk-head">
+      <span>AI 鍙戝竷鍓嶈川妫€</span>
+      <button @click="checkReviewRisk">妫€鏌?/button>
+    </div>
+    <div class="ai-risk-result">{{riskResult || "鍙戝竷鍓嶅彲鍏堟鏌ュ箍鍛婂紩娴併€佽仈绯绘柟寮忋€侀殣绉佹硠闇插拰鏀诲嚮鎬у唴瀹广€?}}</div>
+  </div>
+  <div class="divider"></div>
+  <div class="blog-shop" @click="showDialog=true">
+    <div class="shop-left">鍏宠仈鍟嗘埛</div>
+    <div v-if="selectedShop.name">{{selectedShop.name}}</div>
+    <div v-else>鍘婚€夋嫨&nbsp;<i class="el-icon-arrow-right"></i></div>
+  </div>
+  <div class="mask" v-show="showDialog" @click="showDialog=false"></div>
+
+  <transition name="el-zoom-in-bottom">
+    <div class="shop-dialog" v-show="showDialog">
+      <div class="blog-shop">
+        <div class="shop-left">鍏宠仈鍟嗘埛</div>
+      </div>
+      <div class="search-bar">
+        <div class="city-select">鏉窞 <i class="el-icon-arrow-down"></i></div>
+        <div class="search-input">
+          <i class="el-icon-search" @click="queryShops"></i>
+          <input v-model="shopName" type="text" placeholder="鎼滅储鍟嗘埛鍚嶇О">
+        </div>
+      </div>
+      <div class="shop-list">
+        <div v-for="s in shops" class="shop-item" @click="selectShop(s)">
+          <div class="shop-name">{{s.name}}</div>
+          <div>{{s.area}}</div>
+        </div>
+      </div>
+    </div>
+  </transition>
+</div>
+<script src="./js/vue.js"></script>
+<script src="./js/axios.min.js"></script>
+<!-- 寮曞叆缁勪欢搴?-->
+<script src="./js/element.js"></script>
+<script src="./js/common.js"></script>
+<script src="./js/footer.js"></script>
+<script>
+
+  const app = new Vue({
+    el: "#app",
+    data() {
+      return {
+        util,
+        fileList: [],
+        params: {},
+        showDialog: false,
+        shops: [],
+        shopName: "",
+        selectedShop: {},
+        riskResult: ""
+      }
+    },
+    created() {
+      this.checkLogin();
+      this.queryShops();
+    },
+    methods: {
+      queryShops() {
+        axios.get("/shop/of/name?name=" + this.shopName)
+          .then(({data}) => this.shops = data)
+          .catch(this.$message.error)
+      },
+      selectShop(s) {
+        this.selectedShop = s;
+        this.showDialog = false;
+      },
+      submitBlog() {
+        let {...data} = this.params;
+        data.images = this.fileList.join(",");
+        data.shopId = this.selectedShop.id;
+        axios.post("/blog", data)
+          .then(resp => location.href = "/info.html")
+          .catch(this.$message.error)
+      },
+      checkReviewRisk() {
+        this.riskResult = "AI 正在检查...";
+        axios.post("/ai/review/risk-check", {
+          scene: "BLOG_NOTE",
+          title: this.params.title,
+          content: this.params.content,
+          shopId: this.selectedShop.id
+        }).then(({data}) => {
+          const tags = data.riskTags || [];
+          const reasons = data.reasons || [];
+          this.riskResult = [
+            "风险等级：" + data.riskLevel + "，分数：" + data.riskScore,
+            tags.length ? "标签：" + tags.join("、") : "",
+            reasons.length ? "原因：" + reasons.join("；") : "",
+            data.suggestion ? "建议：" + data.suggestion : ""
+          ].filter(Boolean).join("\n");
+        }).catch(err => this.riskResult = err);
+      },
+      openFileDialog() {
+        this.$refs.fileInput.click();
+      },
+      fileSelected() {
+        let file = this.$refs.fileInput.files[0];
+        let formData = new FormData();
+        formData.append("file", file);
+        const config = {
+          headers: {"Content-Type": "multipart/form-data;boundary=" + new Date().getTime()}
+        };
+        axios
+          .post("/upload/blog", formData, config)
+          .then(({data}) => this.fileList.push('/imgs' + data))
+          .catch(this.$message.error);
+      },
+      deletePic(i) {
+        axios.get("/upload/blog/delete?name=" + this.fileList[i])
+          .then(() => this.fileList.splice(i, 1))
+          .catch(this.$message.error)
+      },
+      checkLogin() {
+        // 鑾峰彇token
+        let token = sessionStorage.getItem("token");
+        if (!token) {
+          location.href = "login.html"
+        }
+        // 鏌ヨ鐢ㄦ埛淇℃伅
+        axios.get("/user/me")
+          .then()
+          .catch(err => {
+            this.$message.error(err);
+            setTimeout(() => location.href = "login.html", 200)
+          })
+      },
+      goBack() {
+        history.back();
+      },
+      handleRemove(file) {
+        console.log(file);
+      }
+    },
+
+  })
+</script>
+</body>
+</html>

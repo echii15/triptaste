@@ -2,44 +2,89 @@
 
 TripTaste is an AI-enhanced local lifestyle service platform based on the Black Horse Dianping project.
 
-The project maintains the original high-concurrency backend capabilities, including caching, flash sale, asynchronous order processing, and distributed consistency. It also introduces AI services and a Skill-based Agent framework for recommendation, content analysis, and intelligent business workflows.
+The project keeps the original high-concurrency backend capabilities and introduces AI services and a Skill-based Agent framework to provide intelligent recommendation, content analysis, and business assistance.
+
+The system combines traditional Java backend engineering with AI application development, focusing on scalability, reliability, and safe AI integration.
 
 ---
 
-## Project Highlights
+# 1. Project Overview
 
-- Designed high-concurrency backend services with Redis, MQ, and MySQL
-- Implemented flash sale system with atomic stock control and asynchronous order processing
-- Built AI services for shop recommendation, review analysis, and content summarization
-- Designed a lightweight Skill Agent framework for modular AI capability management
-- Added fault tolerance mechanisms to isolate AI service failures from core business flows
+## Core Business Features
 
----
+TripTaste provides common local lifestyle service capabilities:
 
-# Architecture Overview
+- User authentication and session management
+- Shop search and category query
+- Nearby shop recommendation
+- User review and social interaction
+- Coupon flash sale
+- Order creation and payment workflow
 
-The system consists of three layers:
-Client
-|
-Backend Service
-|
-+----------------------+
-| Business Logic Layer |
-+----------------------+
-|
-+----------------------+
-| AI Service / Agent |
-+----------------------+
-|
-Redis / MySQL / MQ
 
-Core business services handle transaction-sensitive operations, while AI services provide recommendation and analysis capabilities.
+## AI Enhanced Features
 
-High-risk operations such as ordering and payment are always validated by backend services instead of being directly controlled by LLM.
+Additional AI capabilities:
+
+- Natural language shop recommendation
+- AI-generated shop summaries
+- Review risk analysis
+- Skill-based Agent orchestration framework
 
 ---
 
-# Technology Stack
+# 2. System Architecture
+
+The system adopts a separated architecture:
+
+```
+                Client
+                   |
+             Backend Service
+                   |
+        +---------------------+
+        | Business Services   |
+        +---------------------+
+                   |
+        +---------------------+
+        | AI Service / Agent  |
+        +---------------------+
+                   |
+        Redis / MySQL / MQ
+```
+
+## Design Principles
+
+- Core business logic is handled by backend services.
+- AI services provide recommendation and analysis capabilities.
+- High-risk operations are validated by backend systems.
+- LLM does not directly execute sensitive operations.
+
+Example:
+
+```
+User Request
+
+      |
+
+LLM / Skill Agent
+
+      |
+
+Generate Recommendation or Draft
+
+      |
+
+Backend Validation
+
+      |
+
+Business Execution
+```
+
+---
+
+# 3. Technology Stack
 
 ## Backend
 
@@ -52,6 +97,7 @@ High-risk operations such as ordering and payment are always validated by backen
 - RabbitMQ
 - Nginx
 
+
 ## AI Service
 
 - Java 17
@@ -61,41 +107,80 @@ High-risk operations such as ordering and payment are always validated by backen
 
 ---
 
-# Core Features
+# 4. Core Implementation
 
-## 1. Authentication and User Session
+## 4.1 Authentication and Session Management
 
 Implemented:
 
 - Phone verification login
 - Token-based authentication
 - Redis-based session storage
-- Automatic token expiration refresh
+- Automatic token refresh mechanism
+
+Components:
+
+```
+LoginInterceptor
+
+RefreshTokenInterceptor
+```
 
 ---
 
-## 2. Shop Query and Cache System
+# 4.2 Shop Query and Cache Optimization
 
-Implemented Cache Aside strategy.
+Implemented Cache Aside architecture.
 
-Optimizations:
+Optimization strategies:
 
-- Empty cache to prevent cache penetration
-- Mutex lock and logical expiration to prevent cache breakdown
-- TTL strategy and cache warming to reduce cache avalanche
+## Cache Penetration Prevention
+
+- Cache empty results
+- Avoid repeated invalid database queries
+
+
+## Cache Breakdown Prevention
+
+- Mutex lock
+- Logical expiration
+
+
+## Cache Avalanche Prevention
+
+- Random TTL
+- Hot data preloading
 
 ---
 
-## 3. Nearby Shop Search
+# 4.3 Nearby Shop Search
 
-Implemented location-based search:
+Implemented location-based shop discovery.
 
-- Store shop coordinates using Redis GEO
-- Support nearby shop queries sorted by distance
+Features:
+
+- Redis GEO storage
+- Distance-based sorting
+- Nearby shop recommendation
+
+
+Flow:
+
+```
+User Location
+
+      |
+
+Redis GEO Query
+
+      |
+
+Sorted Shop List
+```
 
 ---
 
-## 4. Review and Social Features
+# 4.4 Review and Social System
 
 Implemented:
 
@@ -107,31 +192,64 @@ Implemented:
 
 ---
 
-# 5. Flash Sale System
+# 5. High-Concurrency Flash Sale System
 
-Designed a high-concurrency coupon ordering system.
+Designed a coupon flash sale system with asynchronous order processing.
 
-## Request Flow
+## Architecture
+
+```
 User Request
-|
+
+      |
+
 Redis Lua Validation
-|
+
+      |
+
 RabbitMQ
-|
+
+      |
+
 Order Consumer
-|
+
+      |
+
 MySQL Persistence
+```
 
-## Implementation
+---
 
-- Redis Lua script for atomic stock deduction
+## Key Implementation
+
+### Atomic Stock Validation
+
+Used Redis Lua scripts to guarantee atomic operations:
+
+- Inventory check
 - One-user-one-order validation
-- RabbitMQ asynchronous order creation
-- Consumer idempotency
-- Failure retry and compensation mechanism
-- Redisson distributed lock
+- Duplicate request prevention
 
-Ensured inventory consistency and reliable order creation under high concurrency.
+
+### Asynchronous Order Creation
+
+Used RabbitMQ for traffic buffering:
+
+Benefits:
+
+- Reduce database pressure
+- Improve system stability
+- Handle traffic spikes
+
+
+### Order Reliability
+
+Implemented:
+
+- Consumer idempotency
+- Retry mechanism
+- Compensation tasks
+- Distributed lock with Redisson
 
 ---
 
@@ -139,108 +257,195 @@ Ensured inventory consistency and reliable order creation under high concurrency
 
 Implemented AI-powered shop recommendation.
 
-## Features
+## Workflow
 
-- Natural language query understanding
-- Shop retrieval
-- Recommendation reason generation
+```
+User Query
 
-Example API:
+      |
+
+Intent Understanding
+
+      |
+
+Shop Retrieval
+
+      |
+
+Recommendation Generation
+
+      |
+
+Response
+```
+
+---
+
+## API
+
+```
 POST /ai/assistant/recommend
+```
 
-Input:
+Example request:
 
 ```json
 {
-  "query": "nearby restaurants suitable for couples"
+  "query": "recommend restaurants suitable for couples"
 }
-Output:
+```
 
+Response:
+
+```json
 {
   "intentSummary": "...",
   "recommendShops": [],
   "keywords": []
 }
+```
 
-Added Redis caching for AI results to reduce repeated model calls.
-7. AI Shop Summary
+Optimization:
+
+- Redis caching for AI results
+- Reduce repeated LLM calls
+- Improve response latency
+
+---
+
+# 7. AI Shop Summary
 
 Implemented automatic shop reputation summarization.
 
-Pipeline:
+## Pipeline
 
+```
 User Reviews
 
-    |
+      |
 
 Review Information Extraction
 
-    |
+      |
 
 Shop Profile Generation
 
-    |
+      |
 
 LLM Summary
+```
 
 Features:
 
-Review aggregation
-AI-generated summaries
-Result caching
-8. AI Review Risk Detection
+- Review aggregation
+- AI summary generation
+- Result caching
 
-Implemented review content risk analysis.
+---
 
-API:
+# 8. AI Review Risk Detection
 
+Implemented AI-based review risk analysis.
+
+## API
+
+```
 POST /ai/review/risk-check
+```
 
-Functions:
+Features:
 
-Risk classification
-Reason generation
-Suggestion output
+- Risk classification
+- Reason generation
+- Suggestion output
 
-Added fallback handling to prevent AI service failures from affecting the main system.
 
-9. Skill Agent Framework
+Reliability:
+
+- Exception handling
+- Local fallback strategy
+- Prevent AI failure from affecting core services
+
+---
+
+# 9. Skill Agent Framework
 
 Implemented a lightweight Skill-based Agent framework.
 
-Directory:
+Location:
 
+```
 src/main/java/com/hmdp/skill
-Components
+```
+
+---
+
+# Architecture
+
+```
+User Request
+
+      |
+
 Skill Router
 
-Responsible for:
+      |
 
-User intent understanding
-Skill selection
 Skill Registry
 
-Responsible for:
+      |
 
-Skill registration
-Skill lifecycle management
 Skill Executor
 
+      |
+
+Business Capability
+```
+
+---
+
+# Components
+
+## Skill Router
+
 Responsible for:
 
-Parameter validation
-Permission checking
-Skill execution
-User Skill Profile
+- Understanding user intent
+- Selecting suitable skills
+
+
+## Skill Registry
+
+Responsible for:
+
+- Skill registration
+- Skill lifecycle management
+- Skill availability control
+
+
+## Skill Executor
+
+Responsible for:
+
+- Parameter validation
+- Permission checking
+- Skill execution
+
+
+## User Skill Profile
 
 Stores:
 
-User preferences
-Feedback information
-Built-in Skills
+- User preferences
+- Feedback information
+
+---
+
+# Built-in Skills
 
 Implemented:
 
+```
 shop_recommend_skill
 
 shop_summary_skill
@@ -248,11 +453,17 @@ shop_summary_skill
 review_risk_check_skill
 
 order_draft_skill
+```
 
-order_draft_skill only generates order drafts and does not directly execute payment operations.
+`order_draft_skill` only generates order drafts and does not directly execute payment operations.
 
-API Design
-Business APIs
+---
+
+# 10. API Design
+
+## Business APIs
+
+```
 POST /user/login
 
 GET /shop/{id}
@@ -262,13 +473,25 @@ GET /shop-type/list
 POST /blog
 
 POST /voucher-order/seckill
-AI APIs
+```
+
+---
+
+## AI APIs
+
+```
 POST /ai/assistant/recommend
 
 GET /ai/shop/{shopId}/summary
 
 POST /ai/review/risk-check
-Skill APIs
+```
+
+---
+
+## Skill APIs
+
+```
 GET /skill/registry
 
 POST /skill/execute
@@ -276,74 +499,112 @@ POST /skill/execute
 POST /skill/agent/chat
 
 POST /skill/feedback
-Engineering Improvements
-1. High-Concurrency Design
+```
 
-Applied:
+---
 
-Redis atomic operations
-MQ asynchronous processing
-Distributed locking
-Idempotent consumer design
-2. Cache Optimization
+# 11. Engineering Design Highlights
 
-Solved:
-
-Cache penetration
-Cache breakdown
-Cache avalanche
-3. Service Reliability
+## High-Concurrency System
 
 Implemented:
 
-Exception handling
-Fallback strategy
-Retry mechanism
-Compensation task
-4. AI Safety Boundary
+- Redis atomic operations
+- MQ asynchronous processing
+- Distributed locking
+- Idempotent order processing
+
+
+## Cache Optimization
+
+Solved:
+
+- Cache penetration
+- Cache breakdown
+- Cache avalanche
+
+
+## Service Reliability
+
+Implemented:
+
+- Exception handling
+- Retry mechanism
+- Fallback strategy
+- Compensation tasks
+
+
+## AI Safety Boundary
 
 LLM is responsible for:
 
-Intent understanding
-Recommendation generation
+- Intent understanding
+- Recommendation generation
+
 
 Backend services are responsible for:
 
-Data validation
-Permission control
-Transaction execution
-Running the Project
-Start Dependencies
+- Data validation
+- Permission checking
+- Transaction execution
 
-Required:
+---
 
-MySQL
-Redis
-RabbitMQ
-Start Backend
+# 12. Project Improvements
+
+## Current Improvements
+
+- Added AI service fault tolerance
+- Optimized AI result caching
+- Improved Skill execution safety
+
+
+## Future Improvements
+
+- Persistent Skill Registry
+- Multi-Skill orchestration
+- Agent evaluation system
+- AI service monitoring
+- Recommendation effectiveness analysis
+
+---
+
+# 13. Running the Project
+
+## Requirements
+
+- MySQL
+- Redis
+- RabbitMQ
+
+
+## Start Backend
+
+```bash
 cd dianping-nginx-1.18.0
 
 mvn clean compile
 
 mvn spring-boot:run
+```
 
 Access:
 
+```
 http://127.0.0.1:8080
-Future Improvements
-Persistent Skill Registry
-Multi-Skill orchestration
-Agent evaluation system
-AI service monitoring
-Recommendation effectiveness analysis
-Summary
+```
 
-TripTaste combines traditional Java backend engineering with AI application development.
+---
+
+# Summary
+
+TripTaste combines Java backend engineering with AI Agent development.
 
 The project demonstrates:
 
-High-concurrency backend design
-Distributed system practices
-Cache and MQ optimization
-AI service integration
-Agent capability orchestration
+- High-concurrency backend design
+- Redis and MQ based system optimization
+- Distributed transaction handling
+- AI service integration
+- Skill-based Agent architecture
+- Reliable and safe AI application design
